@@ -9,7 +9,7 @@ const taskRoutes = require("./routes/task.route");
 const tagRoutes = require("./routes/tag.route");
 const TeamRoute = require("./routes/team.route");
 var corsOptions = {
-  origin: "http://localhost:5173",
+  origin: "https://stunning-figolla-da6116.netlify.app",
   optionsSuccessStatus: 200,
   credentials: true,
 };

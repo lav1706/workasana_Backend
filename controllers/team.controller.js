@@ -11,7 +11,7 @@ const createTeam = async (req, res) => {
     }
 
     const team = new Team(data);
-    const saved = await team.save();
+    const saved = await team.save().populate("member", "name email");
     res.status(201).json({ message: "Team created", team: saved });
   } catch (error) {
     res.status(500).json({ message: "Error creating team", error });
@@ -51,8 +51,7 @@ const updateTeam = async (req, res) => {
       req.params.id,
       { name, description, member },
       { new: true, runValidators: true }
-    );
-
+    ).populate("member", "name email");
     if (!updated) return res.status(404).json({ message: "Team not found" });
     res.status(200).json({ message: "Team updated", team: updated });
   } catch (error) {
@@ -63,7 +62,10 @@ const updateTeam = async (req, res) => {
 // DELETE
 const deleteTeam = async (req, res) => {
   try {
-    const deleted = await Team.findByIdAndDelete(req.params.id);
+    const deleted = await Team.findByIdAndDelete(req.params.id).populate(
+      "member",
+      "name email"
+    );
     if (!deleted) return res.status(404).json({ message: "Team not found" });
     res.status(200).json({ message: "Team deleted" });
   } catch (error) {
@@ -74,7 +76,7 @@ const addMemberToTeam = async (req, res) => {
   try {
     const { teamId } = req.params;
     const { userId } = req.body;
-    const team = await Team.findById(teamId);
+    const team = await Team.findById(teamId).populate("member", "name email");
     if (!team) return res.status(404).json({ message: "Team not found" });
     const alreadyMember = team.member.some((m) => m && m.toString() === userId);
     if (alreadyMember) {
@@ -102,7 +104,7 @@ const removeMemberFromTeam = async (req, res) => {
     const { teamId } = req.params;
     const { userId } = req.body;
 
-    const team = await Team.findById(teamId);
+    const team = await Team.findById(teamId).populate("member", "name email");
     if (!team) return res.status(404).json({ message: "Team not found" });
 
     const index = team.member.findIndex((m) => m && m.toString() === userId);

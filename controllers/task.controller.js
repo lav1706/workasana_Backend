@@ -1,4 +1,7 @@
 const Task = require("../model/task.model");
+const Project = require("../model/project.model");
+const User = require("../model/user.model");
+const Team = require("../model/team.model");
 
 // CREATE Task
 const createTask = async (req, res) => {
@@ -38,6 +41,59 @@ const getTaskById = async (req, res) => {
     res.status(200).json(task);
   } catch (error) {
     res.status(500).json({ message: "Error fetching task", error });
+  }
+};
+
+const FilterByKey = async (req, res) => {
+  try {
+    const { owner, project, team, status } = req.query;
+    const query = {};
+
+    if (owner) {
+      const user = await User.findOne({ name: owner });
+      if (user) {
+        query.owners = user._id;
+      } else {
+        return res.json([]);
+      }
+    }
+
+    if (project) {
+      if (project.match(/^[0-9a-fA-F]{24}$/)) {
+        query.project = project; // ID
+      } else {
+        const proj = await Project.findOne({ name: project });
+        if (proj) {
+          query.project = proj._id;
+        } else {
+          return res.json([]);
+        }
+      }
+    }
+
+    if (team) {
+      if (team.match(/^[0-9a-fA-F]{24}$/)) {
+        query.team = team;
+      } else {
+        const t = await Team.findOne({ name: team });
+        if (t) {
+          query.team = t._id;
+        } else {
+          return res.json([]);
+        }
+      }
+    }
+
+    if (status) {
+      query.status = status;
+    }
+    console.log("Query params:", req.query);
+
+    const tasks = await Task.find(query).populate("owners project team");
+    res.json(tasks);
+  } catch (error) {
+    console.error("Error filtering tasks:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -118,4 +174,5 @@ module.exports = {
   deleteTask,
   updateTaskPriority,
   updateTaskStatus,
+  FilterByKey,
 };
