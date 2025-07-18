@@ -3,14 +3,14 @@ const Team = require("../model/team.model");
 // CREATE
 const createTeam = async (req, res) => {
   try {
-    const { name, description, member } = req.body;
+    const data = req.body;
 
-    const existing = await Team.findOne({ name });
+    const existing = await Team.findOne({ name: data.name });
     if (existing) {
       return res.status(400).json({ message: "Team already exists" });
     }
 
-    const team = new Team({ name, description, member });
+    const team = new Team(data);
     const saved = await team.save();
     res.status(201).json({ message: "Team created", team: saved });
   } catch (error) {
@@ -72,22 +72,26 @@ const deleteTeam = async (req, res) => {
 };
 const addMemberToTeam = async (req, res) => {
   try {
-    const { teamId, userId } = req.params;
-
+    const { teamId } = req.params;
+    const { userId } = req.body;
     const team = await Team.findById(teamId);
     if (!team) return res.status(404).json({ message: "Team not found" });
-
-    if (team.member.includes(userId)) {
+    const alreadyMember = team.member.some((m) => m && m.toString() === userId);
+    if (alreadyMember) {
       return res
         .status(400)
         .json({ message: "User is already a member of this team" });
     }
-
     team.member.push(userId);
-    const updated = await team.save();
+    await team.save();
+    const updatedTeam = await Team.findById(teamId).populate(
+      "member",
+      "name email"
+    );
 
-    res.status(200).json({ message: "Member added", team: updated });
+    res.status(200).json({ message: "Member added", team: updatedTeam });
   } catch (error) {
+    console.error("Error in addMemberToTeam:", error);
     res.status(500).json({ message: "Error adding member", error });
   }
 };
@@ -95,12 +99,13 @@ const addMemberToTeam = async (req, res) => {
 // REMOVE MEMBER
 const removeMemberFromTeam = async (req, res) => {
   try {
-    const { teamId, userId } = req.params;
+    const { teamId } = req.params;
+    const { userId } = req.body;
 
     const team = await Team.findById(teamId);
     if (!team) return res.status(404).json({ message: "Team not found" });
 
-    const index = team.member.indexOf(userId);
+    const index = team.member.findIndex((m) => m && m.toString() === userId);
     if (index === -1) {
       return res
         .status(400)
@@ -108,10 +113,16 @@ const removeMemberFromTeam = async (req, res) => {
     }
 
     team.member.splice(index, 1);
-    const updated = await team.save();
+    await team.save();
 
-    res.status(200).json({ message: "Member removed", team: updated });
+    const updatedTeam = await Team.findById(teamId).populate(
+      "member",
+      "name email"
+    );
+
+    res.status(200).json({ message: "Member removed", team: updatedTeam });
   } catch (error) {
+    console.error("Error in removeMemberFromTeam:", error);
     res.status(500).json({ message: "Error removing member", error });
   }
 };
